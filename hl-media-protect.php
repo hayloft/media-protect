@@ -165,6 +165,7 @@ class HL_Media_Protect
             'post_status' => null,
             'meta_key' => 'hl_visibility',
             'meta_value' => ['private', 'password'],
+            'numberposts' => -1,
         ]);
 
         $files_rules = [];
