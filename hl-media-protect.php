@@ -28,6 +28,10 @@ class HL_Media_Protect
             }
         });
 
+        add_action('after_setup_theme', function() {
+            $this->register_acf();
+        });
+
         add_action('the_post', function(WP_Post $post) {
             if ($post->post_type === 'attachment') {
                 $this->filter_attachment($post);
@@ -42,11 +46,14 @@ class HL_Media_Protect
             return $this->filter_posts($posts, $query);
         }, 10, 2);
 
-        add_action('edit_attachment', function($post_id) {
+        add_action('edit_attachment', function() {
             $this->flush_rewrite_rules();
         }, 1000, 2);
 
-        $this->register_acf();
+        add_action('add_attachment', function($attachment_id) {
+            $this->protect_attachment_for_parent_post($attachment_id);
+            $this->flush_rewrite_rules();
+        }, 1000, 2);
     }
 
     private function register_acf()
@@ -57,7 +64,7 @@ class HL_Media_Protect
             'fields' => array(
                 array(
                     'key' => 'field_5fd23b05c9ecd',
-                    'label' => 'Sichtbarkeit',
+                    'label' => __('Sichtbarkeit'),
                     'name' => 'hl_visibility',
                     'type' => 'select',
                     'instructions' => '',
@@ -69,9 +76,9 @@ class HL_Media_Protect
                         'id' => '',
                     ),
                     'choices' => array(
-                        'public' => 'Öffentlich',
-                        'private' => 'Privat',
-                        'password' => 'Passwortgeschützt',
+                        'public' => __('Public'),
+                        'private' => __('Private'),
+                        'password' => __('Password protected'),
                     ),
                     'default_value' => false,
                     'allow_null' => 0,
@@ -83,7 +90,7 @@ class HL_Media_Protect
                 ),
                 array(
                     'key' => 'field_5fd23b1dc9ece',
-                    'label' => 'Passwort',
+                    'label' => __('Password'),
                     'name' => 'hl_password',
                     'type' => 'text',
                     'instructions' => '',
@@ -140,7 +147,13 @@ class HL_Media_Protect
                 break;
             case 'password':
                 $attachment = get_post($attachment_id);
-                $attachment->post_password = apply_filters('hl_media_protect_password', get_field('hl_password', $attachment_id));
+
+                $password = get_field('hl_password', $attachment_id);
+                if (!$password && $attachment->post_parent) {
+                    $password = get_post($attachment->post_parent)->post_password;
+                }
+
+                $attachment->post_password = apply_filters('hl_media_protect_password', $password);
 
                 if (current_user_can('read_private_posts') || !post_password_required($attachment)) {
                     $this->download($attachment_id);
@@ -217,7 +230,12 @@ class HL_Media_Protect
         $attachment_id = $post->ID;
         $visibility = get_field('hl_visibility', $attachment_id);
         if ($visibility === 'password') {
-            $post->post_password = apply_filters('hl_media_protect_password', get_field('hl_password', $attachment_id));
+            $password = get_field('hl_password', $attachment_id);
+            if (!$password && $post->post_parent) {
+                $password = get_post($post->post_parent)->post_password;
+            }
+
+            $post->post_password = apply_filters('hl_media_protect_password', $password);
         }
     }
 
@@ -254,6 +272,19 @@ class HL_Media_Protect
     private function flush_rewrite_rules()
     {
         save_mod_rewrite_rules();
+    }
+
+    private function protect_attachment_for_parent_post($attachment_id)
+    {
+        $attachment = get_post($attachment_id);
+        if ($attachment->post_parent) {
+            $post = get_post($attachment->post_parent);
+            if ($post && $post->post_password) {
+                update_field('hl_visibility', 'password', $attachment_id);
+            } elseif ($post && get_post_status($post) === 'private') {
+                update_field('hl_visibility', 'private', $attachment_id);
+            }
+        }
     }
 }
 
