@@ -18,6 +18,10 @@ class HL_Media_Protect
             return $this->rewrite_rules($rules);
         });
 
+        add_filter('robots_txt', function($output) {
+            return $this->rewrite_robots_txt($output);
+        });
+
         add_action('init', function() {
             if (isset($_GET['hl_download']) && isset($_GET['attachment_id'])) {
                 $this->serve($_GET['attachment_id']);
@@ -183,6 +187,29 @@ class HL_Media_Protect
             . '</IfModule>';
 
         return $rules;
+    }
+
+    private function rewrite_robots_txt($output)
+    {
+        $attachments = get_posts([
+            'post_type' => 'attachment',
+            'post_status' => null,
+            'meta_key' => 'hl_visibility',
+            'meta_value' => ['private', 'password'],
+            'numberposts' => -1,
+        ]);
+
+        $rules = [];
+        foreach ($attachments as $attachment) {
+            $url = wp_get_attachment_url($attachment->ID);
+            $local_url = explode(site_url(), $url)[1];
+
+            if ($local_url) {
+                $rules[] = 'Disallow: ' . $local_url;
+            }
+        }
+
+        return $output . PHP_EOL . implode(PHP_EOL, $rules);
     }
 
     private function filter_attachment(WP_Post $post)
