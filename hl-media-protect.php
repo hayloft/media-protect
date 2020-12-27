@@ -138,6 +138,7 @@ class HL_Media_Protect
 
     private function serve($attachment_id)
     {
+        define('DONOTCACHEPAGE', true);
         $visibility = get_field('hl_visibility', $attachment_id);
         switch ($visibility) {
             case 'private':
