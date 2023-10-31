@@ -29,7 +29,9 @@ class HL_Media_Protect
         });
 
         add_action('after_setup_theme', function() {
-            $this->register_acf();
+            if (class_exists(ACF::class)) {
+                $this->register_acf();
+            }
         });
 
         add_action('the_post', function(WP_Post $post) {
@@ -195,10 +197,10 @@ class HL_Media_Protect
             $files_rules[] = 'RewriteRule ^' . $local_url . '$ /index.php?hl_download=1&attachment_id=' . $attachment->ID . ' [NC,L]';
         }
 
-        $rules .= '<IfModule mod_rewrite.c>' . PHP_EOL
+        $rules .= PHP_EOL . '<IfModule mod_rewrite.c>' . PHP_EOL
             . 'RewriteEngine On' . PHP_EOL
             . implode(PHP_EOL, $files_rules) . PHP_EOL
-            . '</IfModule>';
+            . '</IfModule>' . PHP_EOL;
 
         return $rules;
     }
@@ -289,6 +291,4 @@ class HL_Media_Protect
     }
 }
 
-if (class_exists(ACF::class)) {
-    (new HL_Media_Protect())->register();
-}
+(new HL_Media_Protect())->register();
