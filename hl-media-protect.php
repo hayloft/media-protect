@@ -3,7 +3,7 @@
 /*
 Plugin Name: Media Protect
 Plugin URI: https://www.hayloft-it.ch
-Version: 1.0
+Version: 1.1
 Author: Hayloft-IT GmbH
 Author URI: https://www.hayloft-it.ch
 Text Domain: hl-media-protect
